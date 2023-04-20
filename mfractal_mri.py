@@ -5,6 +5,7 @@ import nibabel as nib
 from typing import List,Union,Tuple
 from enum import Enum
 
+from preprocessing import Preprocessing
 from sfc import padding, hilbert2d_sfc
 from tools import vectorize,mvectorize,mvectorize2
 from mfdfa import mfdfa_py, mfdfa_matlab, ghurst
@@ -16,17 +17,19 @@ DEFAULT_QS = np.concatenate((np.arange(-4,0,.2),np.arange(0.2,4.2,.2)))
 DEFAULT_WINDOW_SIZE = 10
 DEFAULT_FIT_ORDER = 2
 DEFAULT_MFDFA_LIB = 'py'
+DEFAULT_BRAIN_TH = 0.99
 
 class mfractal_mri:
     
     def __init__(self,
-                 verbose : bool = False):
-        
+                 preprocess_scan : bool = True,
+                 verbose : bool = False) -> None:
+
         self._state = 0
         
         self.prep = None
         
-        self.scan_file = None
+        self.scan = None
         self.slices = None
         self.sfcs = None
         self.Fqs = None
@@ -35,25 +38,28 @@ class mfractal_mri:
         self.Hs = None
         self.Hs_res = None
         
+        self.preprocess_scan = preprocess_scan
+        self.verbose = verbose
+        self.scan_file = None
         self.sfc_mode = None
         self.slice_axis = None
         self.window_size_cleaning = None
         self.fit_order = None
         
-        self.verbose = verbose
         
-    @staticmethod
-    def _load_scan(nii_file : Union[str,Path],
-                   *args, **kwargs) -> nib.spatialimages.SpatialImage:
         
-        return nib.load(nii_file)
+#     @staticmethod
+#     def _load_scan(nii_file : Union[str,Path],
+#                    *args, **kwargs) -> nib.spatialimages.SpatialImage:
+        
+#         return nib.load(nii_file)
     
     @staticmethod
-    def _slice_scan(scan_file : nib.spatialimages.SpatialImage,
+    def _slice_scan(scan : np.ndarray,
                     slice_axis : str = DEFAULT_SLICE_AXIS,
                     norm_level : str = 'slice',
                     max_norm_val : float = 255.0,
-                    quantize_slices : bool = False,
+                    quantize_val : bool = False,
                     eps : float = 1e-20,
                     *args, **kwargs) -> np.ndarray:
         '''
@@ -65,13 +71,13 @@ class mfractal_mri:
         max_norm_val - value to which slices are normalized; default = 255
         '''
         if slice_axis == 'z':
-            slices = np.transpose(scan_file.dataobj,axes=(2,0,1))
+            slices = np.transpose(scan,axes=(2,0,1))
         elif slice_axis == 'x':
-            slices = np.transpose(scan_file.dataobj,axes=(0,1,2))
+            slices = np.transpose(scan,axes=(0,1,2))
         elif slice_axis == 'y':
-            slices = np.transpose(scan_file.dataobj,axes=(1,0,2))
+            slices = np.transpose(scan,axes=(1,0,2))
         elif slice_axis == 'none' or slice_axis == None:
-            slices = np.expand_dims(scan_file.dataobj,0)
+            slices = np.expand_dims(scan,0)
         else:
             print(f'error: unknown slice_axis = {slice_axis}')
     
@@ -80,7 +86,7 @@ class mfractal_mri:
         elif norm_level == 'scan':
             slices = max_norm_val * (slices / slices.max())
         
-        if quantize_slices:
+        if quantize_val:
             slices = np.round(slices).astype(int)
         
         if (slices < 0).any():
@@ -258,13 +264,35 @@ class mfractal_mri:
     
     
     def load_scan(self,
-                  nii_file : str,
+                  scan_file : Union[str,Path],
                   *args, **kwargs) -> None:
         '''
         TODO: load_scan help
         '''
+        scan_file = Path(scan_file)
         
-        self.scan_file = mfractal_mri._load_scan(nii_file = nii_file)   
+        if not scan_file.exists():
+            print(f'error: no scan_file = {scan_file}')
+        else:  
+            if ''.join(scan_file.suffixes) not in ['.nii.gz','.nii']:
+                print(f'error: scan_file = {scan_file} is not a NIFTI file')
+            
+        self.scan_file = scan_file
+        
+        if not self.preprocess_scan:
+            self.scan = Preprocessing.read_img(self.scan_file).numpy()
+            
+    def run_preprocessing(self,
+                          brain_threshold : float = DEFAULT_BRAIN_TH,
+                          n4_bias_corr_kwds : dict = None,
+                          *args, **kwargs) -> None:
+        
+        prep_kwargs = {k:v for k,v in kwargs.items() if k in ['save_brain_img','save_bias_corrected']}
+        self.prep = Preprocessing(**prep_kwargs)
+        self.scan = self.prep.preprocess_structural_img_path(img_path = self.scan_file,
+                                                             brain_threshold = brain_threshold,
+                                                             n4_bias_corr_kwds = n4_bias_corr_kwds,
+                                                             to_numpy = True)
     
     def slice_scan(self,
                    slice_axis : str = DEFAULT_SLICE_AXIS,
@@ -273,7 +301,7 @@ class mfractal_mri:
         TODO: slice scan help
         '''
         
-        self.slices = mfractal_mri._slice_scan(scan_file = self.scan_file,
+        self.slices = mfractal_mri._slice_scan(scan = self.scan,
                                                slice_axis = slice_axis,
                                                *args, **kwargs)
         
@@ -352,8 +380,11 @@ class mfractal_mri:
         
         self.Hs, self.Hs_res = Hs, Hs_res
 
-    def pipeline(self,*args,**kwargs):
+    def pipeline(self,
+                 *args,**kwargs):
+        
         self.load_scan(*args,**kwargs)
+        if self.preprocess_scan: self.run_preprocessing(*args,**kwargs)
         self.slice_scan(*args,**kwargs)
         self.slice_to_sfc(*args,**kwargs)
         self.calc_mfdfa(*args,**kwargs)
