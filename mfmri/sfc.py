@@ -31,17 +31,17 @@ def hilbert2d_sfc(arr,return_dict = False):
     '''
     if len(arr.shape) != 2:
         print('error: incorrect arr dimensionality; len(arr.shape) != 2')
-    
+
     if arr.shape[0] != arr.shape[1]:
         print('error: arr is rectangular; arr.shape[0] != arr.shape[1]')
-        
-    
+
+
     rowNumel = arr.shape[0]
     order = int(np.log2(rowNumel))
 
     if 2**order != rowNumel:
         print('error: arr dimensions != 2**n')
-    
+
     a = 1+1j
     b = 1-1j
     z = 0
@@ -50,22 +50,22 @@ def hilbert2d_sfc(arr,return_dict = False):
         w = 1j*np.conj(z)
         z = np.array([w-a,z-b,z+a,b-w])/2
         z = z.reshape(-1)
-        
+
     newCol = np.real(z)
     newRow = np.imag(z)
-    
+
     newCol = rowNumel*newCol/2 + rowNumel/2 + 0.5
     newRow = rowNumel*newRow/2 + rowNumel/2 + 0.5
 
     hilbertInd = ((newCol-1)*rowNumel+newRow-1).astype(int)
-    
+
     ixs = np.indices(arr.shape)
     ixs = np.transpose(ixs,(1,2,0))
     ixs = ixs.reshape(-1,2)
 
     ixsH = ixs[hilbertInd]
     arrH = arr.reshape(-1)[hilbertInd]
-    
+
     #LT, VO
     if return_dict:
         return {'LT':arrH,'VO':ixsH}

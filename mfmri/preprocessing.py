@@ -1,10 +1,16 @@
 import pathlib
+
+# hacks to disable annoying tensorflow warnings
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
+
 import ants
 import antspynet
 from typing import Union
 from pathlib import Path
 
 import numpy
+
 
 
 class Preprocessing:

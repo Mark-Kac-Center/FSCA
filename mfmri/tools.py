@@ -18,12 +18,12 @@ def mvectorize(f):
             out = f(x,*args,**kwargs)
             L = len(out)
             outs+=[out]
-        
+
         out = tuple()
         for i in range(L):
             out += (np.array([outs[j][i] for j in range(len(outs))],dtype=object),)
         return out
-                
+
     return fv
 
 def mvectorize2(f):
@@ -36,10 +36,10 @@ def mvectorize2(f):
             out = f(x,y,*args,**kwargs)
             L = len(out)
             outs+=[out]
-        
+
         out = tuple()
         for i in range(L):
             out += (np.array([outs[j][i] for j in range(len(outs))],dtype=object),)
         return out
-                
+
     return fv
