@@ -72,7 +72,7 @@ def aut_MFDFA(seria,s,q,m):
             powerF = F[j,:np.floor(N/s[j]).astype(int)*2]**(q[i]/2)
             Fq[j,i] = (powerF.sum(axis=0)/(2*np.floor(N/s[j])))**(1/q[i])
     
-    return Fq
+    return s, Fq
 
 def mfdfa_matlab(timeseries, lag, q, order):
     return aut_MFDFA(seria = timeseries,s = lag ,q = q,m = order)
