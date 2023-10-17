@@ -4,9 +4,11 @@ Module for **extracting multifractal features** from **Magnetic Resonance Imagin
 Fractal calculations are performed using the [Multifractal Detrended Fluctuation Analysis](https://www.sciencedirect.com/science/article/pii/S0378437102013833).
 
 ## Usage
+We provide full and lite versions of the pipeline. The full version includes a machine-learning preprocessing module while the lite version is lightweight but assumes you input an mri scan preprocessed elsewhere.
 
-* Full version
-To extract Hurst exponents from raw (i.e. not preprocessed) brain MRI scan:
+#### Full pipeline
+
+To extract Hurst exponents from a **raw (i.e. not preprocessed) MRI scan**:
 ```
 from mfmri.mfmri_full import MFractalMRI
 
@@ -16,8 +18,9 @@ hurst_exps = mri.get_hurst()
 ```
 The output is a set of exponents along the z axis.
 
-* Lite version
-To extract Hurst exponents from a preprocessed brain scan, use instead:
+#### Lite pipeline
+
+To extract Hurst exponents from a **preprocessed MRI scan**, use instead:
 ```
 from mfmri.mfmri_lite import LiteMFractalMRI
 
