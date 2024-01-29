@@ -81,10 +81,10 @@ class BaseMFractalMRI:
         scan_file = Path(scan_file)
 
         if not scan_file.exists():
-            print(f'error: no scan_file = {scan_file}')
+            raise FileNotFoundError(f'error: no scan_file = {scan_file}')
         else:
             if ''.join(scan_file.suffixes) not in ['.nii.gz','.nii']:
-                print(f'error: scan_file = {scan_file} is not a NIFTI file')
+                raise ValueError(f'error: scan_file = {scan_file} is not a NIFTI file')
 
         self.scan_file = scan_file
 
@@ -248,16 +248,16 @@ class BaseMFractalMRI:
             print('calc_ghurst()...')
 
         if scale_preset == 'all_scales':
-            min_scale_ix = None
-            max_scale_ix = None
+            min_scale_ix = min_scale_ix
+            max_scale_ix = max_scale_ix
 
         elif scale_preset == 'small_scales':
             min_scale_ix = None
             # max_scale_ix = 11
-            max_scale_ix = 5
+            max_scale_ix = 5 if max_scale_ix is None else max_scale_ix
 
         elif scale_preset == 'large_scales':
-            min_scale_ix = 20
+            min_scale_ix = 20 if min_scale_ix is None else min_scale_ix
             max_scale_ix = None
 
         else:
