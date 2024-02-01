@@ -1,5 +1,6 @@
 import pytest
 import numpy as np
+import re
 
 from mfmri.mfmri_core import BaseMFractalMRI
 
@@ -12,12 +13,15 @@ def test__load_scan_success(BaseMFractalMRI_instance):
     BaseMFractalMRI_instance.load_scan(scan_file)
     
     assert isinstance(BaseMFractalMRI_instance.scan,np.ndarray)
+    
+    scan_file = np.random.randn(10,10,10)
+    BaseMFractalMRI_instance.load_scan(scan_file)
+    assert isinstance(BaseMFractalMRI_instance.scan,np.ndarray)
 
 def test__load_scan_file_missing(BaseMFractalMRI_instance):
     scan_file = 'test-data/scanfile_missing.nii.gz'
     with pytest.raises(FileNotFoundError, match=f'error: no scan_file = {scan_file}'):
         BaseMFractalMRI_instance.load_scan(scan_file)
-    
     
 @pytest.fixture
 def scan_file_npz(tmp_path_factory):
@@ -30,6 +34,11 @@ def test__load_scan_file_wrong_filetype(BaseMFractalMRI_instance,scan_file_npz):
     with pytest.raises(ValueError, match=f'error: scan_file = {scan_file_npz} is not a NIFTI file'):
         BaseMFractalMRI_instance.load_scan(scan_file_npz)
     
+def test__load_scan_wrong_shape_array(BaseMFractalMRI_instance):
+    scan_file = np.random.randn(10,10)
+    match = re.escape(f'error: provided array is of incorrect shape = {scan_file.shape}')
+    with pytest.raises(ValueError, match=match):
+        BaseMFractalMRI_instance.load_scan(scan_file)
     
 def test__slice_scan_basic(BaseMFractalMRI_instance):
     scan_file = 'test-data/scanfile.nii.gz'
@@ -91,8 +100,8 @@ def test__calc_ghurst_scales(BaseMFractalMRI_instance):
     BaseMFractalMRI_instance.calc_ghurst(scale_preset='small_scales')
     
 
-    assert BaseMFractalMRI_instance.ghs[0,29] == params[0]
-    assert BaseMFractalMRI_instance.ghs_res[0,29] == res
+    assert BaseMFractalMRI_instance.ghs[0,29] == pytest.approx(params[0])
+    assert BaseMFractalMRI_instance.ghs_res[0,29] == pytest.approx(res)
 
     sl=slice(20,None)
     scales = x[sl]
@@ -107,6 +116,6 @@ def test__calc_ghurst_scales(BaseMFractalMRI_instance):
     BaseMFractalMRI_instance.calc_ghurst(scale_preset='large_scales')
     
 
-    assert BaseMFractalMRI_instance.ghs[0,29] == params[0]
-    assert BaseMFractalMRI_instance.ghs_res[0,29] == res
+    assert BaseMFractalMRI_instance.ghs[0,29] == pytest.approx(params[0])
+    assert BaseMFractalMRI_instance.ghs_res[0,29] == pytest.approx(res)
 

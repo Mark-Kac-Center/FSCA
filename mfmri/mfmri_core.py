@@ -45,17 +45,21 @@ class BaseMFractalMRI:
         self.fit_order = None
 
     def load_scan(self,
-                  scan_file : Union[str,Path],
+                  scan_file : Union[str,Path,np.ndarray],
                   store_mem : bool = True,
                   **kwargs) -> None:
 
         '''
-        Load a NIFTI scan file. Returns errors if the file does not exist or is not a NIFTI file.
+        Loads a scan. 
+        
+        Possible formats:
+        - NIFTI file
+        - numpy array
 
         Parameters
         ----------
-        scan_file : str or pathlib.Path
-            Path to the NIFTI scan file.
+        scan_file : str, pathlib.Path or numpy.array
+            Path to the NIFTI scan file or a numpy array.
         store_mem : bool, optional
             Store NIFTI file in memory.
 
@@ -64,7 +68,7 @@ class BaseMFractalMRI:
         FileNotFoundError
             If the scan_file path does not exist.
         ValueError
-            If the scan_file is not a NIFTI file.
+            If the scan_file is of incorrect type.
 
         Returns
         -------
@@ -78,18 +82,23 @@ class BaseMFractalMRI:
         if self.verbose:
             print('load_scan()...')
 
-        scan_file = Path(scan_file)
+        if isinstance(scan_file,(str,Path)):
+            scan_file = Path(scan_file)
+            if not scan_file.exists():
+                raise FileNotFoundError(f'error: no scan_file = {scan_file}')
+            else:
+                if ''.join(scan_file.suffixes) not in ['.nii.gz','.nii']:
+                    raise ValueError(f'error: scan_file = {scan_file} is not a NIFTI file')
+            self.scan_file = scan_file
 
-        if not scan_file.exists():
-            raise FileNotFoundError(f'error: no scan_file = {scan_file}')
-        else:
-            if ''.join(scan_file.suffixes) not in ['.nii.gz','.nii']:
-                raise ValueError(f'error: scan_file = {scan_file} is not a NIFTI file')
+            if store_mem:
+                self.scan = nib.load(self.scan_file).get_fdata()
+            
+        elif isinstance(scan_file,np.ndarray):
+            if len(scan_file.shape) != 3:
+                raise ValueError(f'error: provided array is of incorrect shape = {scan_file.shape}')
+            self.scan = scan_file
 
-        self.scan_file = scan_file
-
-        if store_mem:
-            self.scan = nib.load(self.scan_file).get_fdata()
 
     def slice_scan(self,
                    slice_axis : str = DEFAULT_SLICE_AXIS,
