@@ -47,6 +47,7 @@ class BaseMFractalMRI:
     def load_scan(self,
                   scan_file : Union[str,Path,np.ndarray],
                   store_mem : bool = True,
+                  norm : bool = False,
                   **kwargs) -> None:
 
         '''
@@ -60,9 +61,10 @@ class BaseMFractalMRI:
         ----------
         scan_file : str, pathlib.Path or numpy.array
             Path to the NIFTI scan file or a numpy array.
-        store_mem : bool, optional
+        store_mem : bool, optional (default = True)
             Store NIFTI file in memory.
-
+        norm : bool, optional (default = False)
+            Normalize scan between 0-255.
         Raises
         ------
         FileNotFoundError
@@ -98,6 +100,13 @@ class BaseMFractalMRI:
             if len(scan_file.shape) != 3:
                 raise ValueError(f'error: provided array is of incorrect shape = {scan_file.shape}')
             self.scan = scan_file
+            
+        if norm:
+            if self.verbose:
+                print('scan norm...')
+            scan_min = self.scan.min()
+            scan_max = self.scan.max()
+            self.scan = 255*(self.scan - scan_min)/(scan_max - scan_min)
 
 
     def slice_scan(self,
