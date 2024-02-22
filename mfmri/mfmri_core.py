@@ -315,12 +315,13 @@ class BaseMFractalMRI:
     def _slice_scan(scan : np.ndarray,
                     slice_axis : str = DEFAULT_SLICE_AXIS,
                     norm_level : str = DEFAULT_NORM_LEVEL,
+                    min_norm_val : float = 0.0,
                     max_norm_val : float = 255.0,
                     quantize_val : bool = False,
                     eps : float = 1e-20,
                     **kwargs) -> np.ndarray:
 
-        '''
+        f'''
         Slice the given 3D MRI scan along the specified axis.
         If slice_axis is None, a 3D "slice" will be created instead.
         Normalization of slices is conducted a) separately in each slice,
@@ -331,15 +332,17 @@ class BaseMFractalMRI:
         ----------
         scan : np.ndarray
             The 3D scan to be sliced.
-        slice_axis : str, optional
+        slice_axis : str, optional (default = {DEFAULT_SLICE_AXIS})
             The axis along which to slice the scan, one of ['x', 'y', 'z'].
-        norm_level : str, optional
+        norm_level : str, optional (default = {DEFAULT_NORM_LEVEL})
             How to normalize the slices, one of ['slice', 'scan'].
-        max_norm_val : float, optional
-            The value to which the slices are normalized.
-        quantize_val : bool, optional
+        min_norm_val : float, optional (default = 0.0)
+            The minimum value to which the slices are normalized.
+        max_norm_val : float, optional (default = 255.0)
+            The maximum value to which the slices are normalized.
+        quantize_val : bool, optional (default = False)
             Whether to round the normalized values to the nearest integer.
-        eps : float, optional
+        eps : float, optional (default = 1e-20)
             A small positive constant to avoid division by zero.
 
         Returns:
@@ -360,7 +363,10 @@ class BaseMFractalMRI:
             print(f'error: unknown slice_axis = {slice_axis}')
 
         if norm_level == 'slice':
-            slices = max_norm_val * (slices / (slices.max(axis=(1,2),keepdims=True) + eps))
+            minv = slices.min(axis=(1,2),keepdims=True)
+            maxv = slices.max(axis=(1,2),keepdims=True)
+            x = (slices - minv) / (maxv - minv + eps)
+            slices = max_norm_val * x + min_norm_val * (1-x)
         elif norm_level == 'scan':
             slices = max_norm_val * (slices / slices.max())
 
