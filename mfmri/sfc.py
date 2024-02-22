@@ -1,5 +1,6 @@
 import numpy as np
 from typing import Union
+import os
 
 def padding(arr: np.ndarray) -> np.ndarray:
     '''
@@ -94,6 +95,8 @@ def ddsfc2d(arr: np.ndarray,
     
     _check_arr_dims(arr)
     
+    sfc_module_dir = os.path.dirname(os.path.realpath(__file__))
+    
     TEMP_FILE = 'tempfile.mat'
 
     if not matlab_engine:
@@ -102,12 +105,12 @@ def ddsfc2d(arr: np.ndarray,
         
     else:
         eng = matlab_engine
-    
-    # light check to ensure were in the right directory
-    if not 'ddsfc_matlab' in eng.cd():
-        eng.cd('mfmri/ddsfc_matlab')
+
+    # ensure we are in the right directory
+    eng.cd(f'{sfc_module_dir}/ddsfc_matlab')
         
     curr_path = Path(eng.cd())
+    
     temp_file_path = curr_path / TEMP_FILE
     
     savemat(temp_file_path,{'V':arr})
