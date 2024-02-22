@@ -1,6 +1,7 @@
 import numpy as np
+from typing import Union
 
-def padding(arr):
+def padding(arr: np.ndarray) -> np.ndarray:
     '''
     arr is embedded inside a cube of size 2**n (any dimensionality works)
     '''
@@ -25,16 +26,20 @@ def padding(arr):
 #     print(pad_width)
     return arrpad
 
-def hilbert2d_sfc(arr,return_dict = False):
-    '''
-    arr - 2d array to be hilbertized
-    '''
+def _check_arr_dims(arr: np.ndarray) -> None:
     if len(arr.shape) != 2:
         print('error: incorrect arr dimensionality; len(arr.shape) != 2')
 
     if arr.shape[0] != arr.shape[1]:
-        print('error: arr is rectangular; arr.shape[0] != arr.shape[1]')
+        print('error: arr is not square; arr.shape[0] != arr.shape[1]')
 
+def hilbert2d_sfc(arr: np.ndarray,
+                  return_dict: bool = False) -> Union[dict,np.ndarray]:
+    '''
+    arr - 2d array to be hilbertized
+    '''
+    
+    _check_arr_dims(arr)
 
     rowNumel = arr.shape[0]
     order = int(np.log2(rowNumel))
@@ -71,3 +76,54 @@ def hilbert2d_sfc(arr,return_dict = False):
         return {'LT':arrH,'VO':ixsH}
     else:
         return arrH
+
+def ddsfc2d(arr: np.ndarray, 
+            matlab_engine = None, 
+            return_dict: bool = False) -> Union[dict,np.ndarray]:
+    '''
+    Data-Driven SFC 
+    wrapper of code https://github.com/zhou-l/DataDrivenSpaceFillCurve
+    
+    EXPERIMENTAL - can cause problems if changedir operations fail
+    '''
+    
+    import io
+    from pathlib import Path
+    import os
+    from scipy.io import savemat
+    
+    _check_arr_dims(arr)
+    
+    TEMP_FILE = 'tempfile.mat'
+
+    if not matlab_engine:
+        import matlab.engine
+        eng = matlab.engine.start_matlab()
+        
+    else:
+        eng = matlab_engine
+    
+    # light check to ensure were in the right directory
+    if not 'ddsfc_matlab' in eng.cd():
+        eng.cd('mfmri/ddsfc_matlab')
+        
+    curr_path = Path(eng.cd())
+    temp_file_path = curr_path / TEMP_FILE
+    
+    savemat(temp_file_path,{'V':arr})
+    clLT, clVisitOrder, fullLT = eng.SFCQuadTreeMultiScaleMain(TEMP_FILE,
+                                                               nargout = 3, 
+                                                               stdout = io.StringIO())
+    os.remove(temp_file_path)
+    
+    if not matlab_engine:
+        eng.quit()
+    
+    clVisitOrder = np.asarray(clVisitOrder)
+    clLT = np.asarray(clLT)
+    clLT = clLT[:,0]
+
+    if return_dict:
+        return {'LT': clLT,'VO': clVisitOrder}
+    else:
+        return clLT

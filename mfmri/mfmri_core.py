@@ -3,7 +3,7 @@ from pathlib import Path
 import numpy as np
 import nibabel as nib
 
-from .sfc import padding, hilbert2d_sfc
+from .sfc import padding, hilbert2d_sfc, ddsfc2d
 from .tools import vectorize,mvectorize,mvectorize2
 from .mfdfa import mfdfa_py, mfdfa_matlab, ghurst
 from .mfdfa import aut_artefact8
@@ -156,7 +156,7 @@ class BaseMFractalMRI:
         Parameters
         ----------
         sfc_type : str, optional
-            The type of space-filling algorithm to use. Possible values are ['hilbert','gilbert'].
+            The type of space-filling algorithm to use. Possible values are ['hilbert','gilbert','data-driven'].
 
         Returns
         -------
@@ -185,7 +185,13 @@ class BaseMFractalMRI:
 
         elif sfc_type == 'gilbert':
             print('error: gilbert not implemented')
-
+            
+        elif sfc_type == 'data-driven':
+            self.sfcs = BaseMFractalMRI._slices_to_sfc_ddsfc2d(slices = self.slices)
+            
+        else:
+            return ValueError(f'wrong sfc_type = {sfc_type}')
+        
     def calc_mfdfa(self,
                    scales : Union[tuple,List] = DEFAULT_SCALES,
                    qorders : np.ndarray = DEFAULT_QORDERS,
@@ -367,6 +373,7 @@ class BaseMFractalMRI:
             maxv = slices.max(axis=(1,2),keepdims=True)
             x = (slices - minv) / (maxv - minv + eps)
             slices = max_norm_val * x + min_norm_val * (1-x)
+            
         elif norm_level == 'scan':
             slices = max_norm_val * (slices / slices.max())
 
@@ -404,6 +411,19 @@ class BaseMFractalMRI:
 
         slices = vectorize(padding)(slices)
         return vectorize(hilbert2d_sfc)(slices)
+
+    @staticmethod
+    def _slices_to_sfc_ddsfc2d(slices : np.ndarray,
+                               **kwargs) -> np.ndarray:
+        '''
+        TODO
+        '''
+
+        if len(slices.shape) != 3:
+                print(f'error: wrong slices dims = {slices.shape}')
+
+        slices = vectorize(padding)(slices)
+        return vectorize(ddsfc2d)(slices)
 
     @staticmethod
     def _clean_sfc(sfc : np.ndarray,
