@@ -1,12 +1,10 @@
 %coarse level image file name: clFilename
 %next level image file name: nlFilename
-function [clLT, clVisitOrder, fullLT] = SFCQuadTreeMultiScaleMain(finestLevelFileName) 
+function [clLT, clVisitOrder, fullLT] = SFCQuadTreeMultiScaleMainJG(finestLevelFileName) 
     close all;
     if nargin == 1
                 % load image
-         % V = imread(finestLevelFileName);
-         load(finestLevelFileName,'V'); % load from mat file
-         
+         V = imread(finestLevelFileName);
          if size(V,3) == 3
              V = double(rgb2gray(V));
          else
@@ -15,10 +13,6 @@ function [clLT, clVisitOrder, fullLT] = SFCQuadTreeMultiScaleMain(finestLevelFil
          dimX = size(V,2);
          dimY = size(V,1);
          dimZ = 1;
-         
-         disp(['min(min(V)) = ' num2str(min(min(V)),'%f')]);
-         disp(['max(max(V)) = ' num2str(max(max(V)),'%f')]);
-         display(size(V));
          
     [folder, baseFileName, ext] = fileparts(finestLevelFileName);
     else
@@ -61,13 +55,7 @@ function [clLT, clVisitOrder, fullLT] = SFCQuadTreeMultiScaleMain(finestLevelFil
 %     thres = 0; % no threshold
     % generate quadtree
     S = qtdecomp(V, thres);
-    
-%    display(S);
-    
 %      S = qtdecomp(V);
-
-    display(size(V));
-
     % detect the finest and coarsest levels
     fineBlockDim = nextPow2;
     corsBlockDim = 1;
@@ -90,9 +78,8 @@ function [clLT, clVisitOrder, fullLT] = SFCQuadTreeMultiScaleMain(finestLevelFil
         end
         dim = dim / 2;
     end
-    disp(['fineBlockDim = ' num2str(fineBlockDim,'%d')]);
-    disp(['corsBlockDim = ' num2str(corsBlockDim,'%d')]);
-
+    disp(fineBlockDim);
+    disp(corsBlockDim);
 %TU%    figure, imshow(blocks, []);
 %TU%   drawnow
     nlevels = log2(corsBlockDim) - log2(fineBlockDim)+1;
@@ -105,9 +92,8 @@ function [clLT, clVisitOrder, fullLT] = SFCQuadTreeMultiScaleMain(finestLevelFil
 %          Vlvls{i} = impyramid(Vlvls{i-1}, 'reduce');
     end
     % Calculate the SFC
-    disp(['nlevels = ' num2str(nlevels,'%d')]);
-    
-    display(size(Vlvls));
+    disp('nlevels');
+    disp(nlevels);
     
     [clLT, clVisitOrder] = SFCQuadTree(Vlvls, S, [dimY, 1]);
 %      clLT = allNodesLinearFunc(clVisitOrder, cI);% visiting all nodes without aggregation
@@ -161,6 +147,6 @@ function [clLT, clVisitOrder, fullLT] = SFCQuadTreeMultiScaleMain(finestLevelFil
   %TU% hold off;
     % writeout results
 
-%     csvwrite(LTilename, clLT);
+%     csvwrite(LTfilename, clLT);
 % % %     csvwrite(VOfilename, clVisitOrder);
 end

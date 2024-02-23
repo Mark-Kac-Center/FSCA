@@ -116,7 +116,8 @@ def ddsfc2d(arr: np.ndarray,
     savemat(temp_file_path,{'V':arr})
     clLT, clVisitOrder, fullLT = eng.SFCQuadTreeMultiScaleMain(TEMP_FILE,
                                                                nargout = 3, 
-                                                               stdout = io.StringIO())
+                                                               stdout = io.StringIO()
+                                                              )
     os.remove(temp_file_path)
     
     if not matlab_engine:

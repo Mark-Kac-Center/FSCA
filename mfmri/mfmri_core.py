@@ -567,6 +567,9 @@ class BaseMFractalMRI:
 
             # if dfa.shape != (len(scales),len(qorders)):
 
+        dfa = dfa.astype('float')
+        scales = scales.astype('int')
+        
         return dfa, scales
 
     @staticmethod
@@ -641,7 +644,7 @@ class BaseMFractalMRI:
 
         else:
             print(f'error: wrong len(sfcs.shape) = {len(sfcs.shape)}')
-
+    
         return fqs, scaless
 
     @staticmethod
