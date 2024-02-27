@@ -278,10 +278,10 @@ class BaseMFractalMRI:
         elif scale_preset == 'small_scales':
             min_scale_ix = None
             # max_scale_ix = 11
-            max_scale_ix = 5 if max_scale_ix is None else max_scale_ix
+            max_scale_ix = DEFAULT_SMALL_SCALES_INTERVAL_SIZE if max_scale_ix is None else max_scale_ix
 
         elif scale_preset == 'large_scales':
-            min_scale_ix = 20 if min_scale_ix is None else min_scale_ix
+            min_scale_ix = -DEFAULT_LARGE_SCALES_INTERVAL_SIZE if min_scale_ix is None else min_scale_ix
             max_scale_ix = None
 
         else:
