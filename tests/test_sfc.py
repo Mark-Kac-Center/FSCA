@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 
-from mfmri.sfc import ddsfc2d
+from mfmri.sfc import ddsfc2d, hilbert3d_sfc
 
 @pytest.fixture
 def matlab_engine_instance():
@@ -35,3 +35,11 @@ def test__ddsfc2d_return_dictionary():
     assert isinstance(arr_dict, dict)
     assert arr_dict['LT'].shape == (8*8,)
     assert arr_dict['VO'].shape == (8*8,2)
+    
+def test__hilbert3d_basic():
+    arr = np.random.randn(16,16,16)
+    arr_sfc = hilbert3d_sfc(arr)
+    
+    assert isinstance(arr_sfc,np.ndarray)
+    assert arr_sfc.shape == (16**3,)
+    

@@ -3,7 +3,7 @@ from pathlib import Path
 import numpy as np
 import nibabel as nib
 
-from .sfc import padding, hilbert2d_sfc, ddsfc2d
+from .sfc import padding, hilbert2d_sfc,hilbert3d_sfc, ddsfc2d
 from .tools import vectorize,mvectorize,mvectorize2
 from .mfdfa import mfdfa_py, mfdfa_matlab, ghurst
 from .mfdfa import aut_artefact8
@@ -23,8 +23,9 @@ class BaseMFractalMRI:
         # scan shape 3D = (x,y,z)
         self.scan = None
         # slices shape 3D = (slice_id, len_1, len_2)
+        # or shape 4D = (1, len_1, len_2, len_3)
         self.slices = None
-        # SFC signals shape 2D = (slice_id, len_1*len_2)
+        # SFC signals shape 2D = (slice_id, len_1*len_2) or (1, len_1*len_2*len_3)
         self.sfcs = None
         # mfractal fluctuations shape 3D = (slice_id, len(self.scales), len(self.qorders))
         self.fqs = None
@@ -118,8 +119,8 @@ class BaseMFractalMRI:
         Parameters
         ----------
         slice_axis : str, optional
-            The axis along which to slice the scan. Must be one of 'x', 'y', or 'z',
-            corresponding to the x-axis, y-axis, or z-axis, respectively.
+            The axis along which to slice the scan. Must be one of 'x', 'y', 'z' or 'none',
+            corresponding to the x-axis, y-axis, z-axis or no slice respectively. If no slicing is specified, the entire 3D scan is analyzed as a hyper-slice.
         **kwargs : dict, optional
             Additional keyword arguments to pass to the `_slice_scan` function.
 
@@ -156,7 +157,7 @@ class BaseMFractalMRI:
         Parameters
         ----------
         sfc_type : str, optional
-            The type of space-filling algorithm to use. Possible values are ['hilbert','gilbert','data-driven'].
+            The type of space-filling algorithm to use. Possible values are ['hilbert','hilbert3d','gilbert','data-driven'].
 
         Returns
         -------
@@ -177,20 +178,25 @@ class BaseMFractalMRI:
             print('slice_to_sfc()...')
 
         if sfc_type == 'hilbert':
-            # if self.sfc_mode == '2d':
+            if len(self.slices.shape) != 3:
+                raise ValueError(f'error: {sfc_type} needs a 2d slice')
             self.sfcs = BaseMFractalMRI._slices_to_sfc_hilbert2d(slices = self.slices)
 
-            # elif self.sfc_mode == '3d':
-                # print('error: hilbert3d not implemented')
-
+        elif sfc_type == 'hilbert3d':
+            if len(self.slices.shape) != 4:
+                raise ValueError(f'error: {sfc_type} needs a 3d slice')
+            self.sfcs = BaseMFractalMRI._slices_to_sfc_hilbert3d(slices = self.slices)
+                
         elif sfc_type == 'gilbert':
             print('error: gilbert not implemented')
             
         elif sfc_type == 'data-driven':
+            if len(self.slices.shape) != 3:
+                raise ValueError(f'error: {sfc_type} needs a 2d slice')
             self.sfcs = BaseMFractalMRI._slices_to_sfc_ddsfc2d(slices = self.slices)
             
         else:
-            return ValueError(f'wrong sfc_type = {sfc_type}')
+            raise ValueError(f'error: wrong sfc_type = {sfc_type}')
         
     def calc_mfdfa(self,
                    scales : Union[tuple,List] = DEFAULT_SCALES,
@@ -329,9 +335,9 @@ class BaseMFractalMRI:
 
         f'''
         Slice the given 3D MRI scan along the specified axis.
-        If slice_axis is None, a 3D "slice" will be created instead.
+        If slice_axis is 'none', a 3D hyper-slice will be created instead.
         Normalization of slices is conducted a) separately in each slice,
-        or b) globally for the whole scan.
+        or b) globally for the whole scan. 
         If `quantize_val` = True, round the normalized values to the nearest integer.
 
         Parameters:
@@ -339,7 +345,7 @@ class BaseMFractalMRI:
         scan : np.ndarray
             The 3D scan to be sliced.
         slice_axis : str, optional (default = {DEFAULT_SLICE_AXIS})
-            The axis along which to slice the scan, one of ['x', 'y', 'z'].
+            The axis along which to slice the scan, one of ['x', 'y', 'z', 'none'].
         norm_level : str, optional (default = {DEFAULT_NORM_LEVEL})
             How to normalize the slices, one of ['slice', 'scan'].
         min_norm_val : float, optional (default = 0.0)
@@ -356,6 +362,8 @@ class BaseMFractalMRI:
         np.ndarray
             The normalized and sliced scan as a numpy array.
         '''
+        
+        NONE_VALS = ['none','None',None]
 
         if slice_axis == 'z':
             slices = np.transpose(scan,axes=(2,0,1))
@@ -363,19 +371,26 @@ class BaseMFractalMRI:
             slices = np.transpose(scan,axes=(0,1,2))
         elif slice_axis == 'y':
             slices = np.transpose(scan,axes=(1,0,2))
-        # elif slice_axis == 'none' or slice_axis is None:
-            # slices = np.expand_dims(scan,0)
+        elif slice_axis in NONE_VALS:
+            slices = np.expand_dims(scan,0)
         else:
             print(f'error: unknown slice_axis = {slice_axis}')
-
-        if norm_level == 'slice':
-            minv = slices.min(axis=(1,2),keepdims=True)
-            maxv = slices.max(axis=(1,2),keepdims=True)
+        
+        def _norm_slices(slices, axis):
+            minv = slices.min(axis=axis,keepdims=True)
+            maxv = slices.max(axis=axis,keepdims=True)
             x = (slices - minv) / (maxv - minv + eps)
             slices = max_norm_val * x + min_norm_val * (1-x)
-            
-        elif norm_level == 'scan':
-            slices = max_norm_val * (slices / slices.max())
+            return slices
+        
+        if slice_axis in ['x','y','z']:
+            if norm_level == 'slice':
+                slices = _norm_slices(slices, axis = (1,2))
+
+            elif norm_level == 'scan':
+                slices = _norm_slices(slices, axis = (1,2,3))
+        elif slice_axis in NONE_VALS:
+            slices = _norm_slices(slices,axis = (1,2,3))
 
         if quantize_val:
             slices = np.round(slices).astype(int)
@@ -412,6 +427,19 @@ class BaseMFractalMRI:
         slices = vectorize(padding)(slices)
         return vectorize(hilbert2d_sfc)(slices)
 
+    @staticmethod
+    def _slices_to_sfc_hilbert3d(slices: np.ndarray,
+                                 **kwargs) -> np.ndarray:
+        '''
+        TODO
+        '''
+        
+        if len(slices.shape) != 4:
+            print(f'error: wrong slices dims = {slices.shape}')
+
+        slices = vectorize(padding)(slices)
+        return vectorize(hilbert3d_sfc)(slices)
+    
     @staticmethod
     def _slices_to_sfc_ddsfc2d(slices : np.ndarray,
                                **kwargs) -> np.ndarray:

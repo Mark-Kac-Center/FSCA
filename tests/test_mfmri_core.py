@@ -49,12 +49,42 @@ def test__slice_scan_basic(BaseMFractalMRI_instance):
         BaseMFractalMRI_instance.slice_scan(slice_axis=slice_axis)
         assert scan_shape[i] == BaseMFractalMRI_instance.slices.shape[0]
         
+    for slice_axis in ['none','None',None]:
+        BaseMFractalMRI_instance.slice_scan(slice_axis=slice_axis)
+        assert BaseMFractalMRI_instance.slices.shape[0] == 1
+        assert BaseMFractalMRI_instance.slices.shape[1:] == BaseMFractalMRI_instance.scan.shape
+
 def test__slice_to_sfc_basic(BaseMFractalMRI_instance):
     BaseMFractalMRI_instance.scan = np.random.randn(10,10,10)
     BaseMFractalMRI_instance.slice_scan(slice_axis='z')
     BaseMFractalMRI_instance.slice_to_sfc()
     assert BaseMFractalMRI_instance.sfcs.shape == (10,256)
     
+    BaseMFractalMRI_instance.scan = np.random.randn(10,10,10)
+    BaseMFractalMRI_instance.slice_scan(slice_axis='none')
+    BaseMFractalMRI_instance.slice_to_sfc(sfc_type = 'hilbert3d')
+    assert BaseMFractalMRI_instance.sfcs.shape == (1,16**3)
+    
+def test_slice_to_sfc_apply_incompatible_sfc_method(BaseMFractalMRI_instance):
+    BaseMFractalMRI_instance.scan = np.random.randn(10,10,10)
+    
+    # 2d slice -> 3d sfc
+    BaseMFractalMRI_instance.slice_scan(slice_axis='z')
+    with pytest.raises(ValueError, match='error: hilbert3d needs a 3d slice'):
+        BaseMFractalMRI_instance.slice_to_sfc(sfc_type = 'hilbert3d')
+
+    # 3d slice -> 2d sfc
+    BaseMFractalMRI_instance.scan = np.random.randn(10,10,10)
+    BaseMFractalMRI_instance.slice_scan(slice_axis='none')
+    with pytest.raises(ValueError, match="error: hilbert needs a 2d slice"):
+        BaseMFractalMRI_instance.slice_to_sfc()
+        
+def test_slice_to_sfc_unknown_sfc_type(BaseMFractalMRI_instance):
+    BaseMFractalMRI_instance.scan = np.random.randn(10,10,10)
+    BaseMFractalMRI_instance.slice_scan(slice_axis='z')
+    with pytest.raises(ValueError, match="error: wrong sfc_type = grogoth123"):
+        BaseMFractalMRI_instance.slice_to_sfc(sfc_type='grogoth123')
+        
 def test__calc_mfdfa_basic(BaseMFractalMRI_instance):
     BaseMFractalMRI_instance.sfcs = np.random.randn(10,256)
     BaseMFractalMRI_instance.calc_mfdfa()
@@ -103,7 +133,7 @@ def test__calc_ghurst_scales(BaseMFractalMRI_instance):
     assert BaseMFractalMRI_instance.ghs[0,29] == pytest.approx(params[0])
     assert BaseMFractalMRI_instance.ghs_res[0,29] == pytest.approx(res)
 
-    sl=slice(20,None)
+    sl=slice(-10,None)
     scales = x[sl]
     Fq = y[sl]
 
@@ -118,4 +148,5 @@ def test__calc_ghurst_scales(BaseMFractalMRI_instance):
 
     assert BaseMFractalMRI_instance.ghs[0,29] == pytest.approx(params[0])
     assert BaseMFractalMRI_instance.ghs_res[0,29] == pytest.approx(res)
+
 
