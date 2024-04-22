@@ -127,7 +127,8 @@ def hilbert3d_sfc(arr: np.ndarray,
     
 def ddsfc2d(arr: np.ndarray, 
             matlab_engine = None, 
-            return_dict: bool = False) -> Union[dict,np.ndarray]:
+            return_dict: bool = False, 
+            temp_file: str = 'tempfile.mat') -> Union[dict,np.ndarray]:
     '''
     Data-Driven SFC 
     wrapper of code https://github.com/zhou-l/DataDrivenSpaceFillCurve
@@ -144,7 +145,7 @@ def ddsfc2d(arr: np.ndarray,
     
     sfc_module_dir = os.path.dirname(os.path.realpath(__file__))
     
-    TEMP_FILE = 'tempfile.mat'
+    
 
     if not matlab_engine:
         import matlab.engine
@@ -158,10 +159,10 @@ def ddsfc2d(arr: np.ndarray,
         
     curr_path = Path(eng.cd())
     
-    temp_file_path = curr_path / TEMP_FILE
+    temp_file_path = curr_path / temp_file
     
     savemat(temp_file_path,{'V':arr})
-    clLT, clVisitOrder, fullLT = eng.SFCQuadTreeMultiScaleMain(TEMP_FILE,
+    clLT, clVisitOrder, fullLT = eng.SFCQuadTreeMultiScaleMain(temp_file,
                                                                nargout = 3, 
                                                                stdout = io.StringIO()
                                                               )

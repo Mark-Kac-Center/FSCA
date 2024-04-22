@@ -1,5 +1,6 @@
 from typing import List,Union,Tuple
 from pathlib import Path
+import numpy as np
 
 from .mfmri_core import BaseMFractalMRI
 from .const import *
@@ -12,7 +13,20 @@ class LiteMFractalMRI(BaseMFractalMRI):
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs)
 
-    def pipeline(self,
+    def pipeline_2d(self,
+                    data : Union[str, Path, np.ndarray],
+                    **kwargs) -> None:
+
+        self.load_data(**kwargs)
+        self.slice_scan(**kwargs)
+        self.slice_to_sfc(**kwargs)
+        self.calc_mfdfa(**kwargs)
+        self.calc_ghurst(**kwargs)
+
+    def pipeline_2d_time(self):
+        pass
+
+    def pipeline_3d(self,
                  scan_file : Union[str,Path],
                  **kwargs):
 
@@ -59,3 +73,8 @@ class LiteMFractalMRI(BaseMFractalMRI):
         self.slice_to_sfc(**kwargs)
         self.calc_mfdfa(**kwargs)
         self.calc_ghurst(**kwargs)
+
+    def pipeline_3d_time(self):
+        pass
+
+    pipeline = pipeline_3d
