@@ -52,8 +52,8 @@ class BaseMFractalMRI:
                   **kwargs) -> None:
 
         '''
-        Loads a scan. 
-        
+        Loads a scan.
+
         Possible formats:
         - NIFTI file
         - numpy array
@@ -96,12 +96,12 @@ class BaseMFractalMRI:
 
             if store_mem:
                 self.scan = nib.load(self.scan_file).get_fdata()
-            
+
         elif isinstance(scan_file,np.ndarray):
             if len(scan_file.shape) != 3:
                 raise ValueError(f'error: provided array is of incorrect shape = {scan_file.shape}')
             self.scan = scan_file
-            
+
         if norm:
             if self.verbose:
                 print('scan norm...')
@@ -186,18 +186,18 @@ class BaseMFractalMRI:
             if len(self.slices.shape) != 4:
                 raise ValueError(f'error: {sfc_type} needs a 3d slice')
             self.sfcs = BaseMFractalMRI._slices_to_sfc_hilbert3d(slices = self.slices)
-                
+
         elif sfc_type == 'gilbert':
             print('error: gilbert not implemented')
-            
+
         elif sfc_type == 'data-driven':
             if len(self.slices.shape) != 3:
                 raise ValueError(f'error: {sfc_type} needs a 2d slice')
             self.sfcs = BaseMFractalMRI._slices_to_sfc_ddsfc2d(slices = self.slices)
-            
+
         else:
             raise ValueError(f'error: wrong sfc_type = {sfc_type}')
-        
+
     def calc_mfdfa(self,
                    scales : Union[tuple,List] = DEFAULT_SCALES,
                    qorders : np.ndarray = DEFAULT_QORDERS,
@@ -337,7 +337,7 @@ class BaseMFractalMRI:
         Slice the given 3D MRI scan along the specified axis.
         If slice_axis is 'none', a 3D hyper-slice will be created instead.
         Normalization of slices is conducted a) separately in each slice,
-        or b) globally for the whole scan. 
+        or b) globally for the whole scan.
         If `quantize_val` = True, round the normalized values to the nearest integer.
 
         Parameters:
@@ -362,7 +362,7 @@ class BaseMFractalMRI:
         np.ndarray
             The normalized and sliced scan as a numpy array.
         '''
-        
+
         NONE_VALS = ['none','None',None]
 
         if slice_axis == 'z':
@@ -375,14 +375,14 @@ class BaseMFractalMRI:
             slices = np.expand_dims(scan,0)
         else:
             print(f'error: unknown slice_axis = {slice_axis}')
-        
+
         def _norm_slices(slices, axis):
             minv = slices.min(axis=axis,keepdims=True)
             maxv = slices.max(axis=axis,keepdims=True)
             x = (slices - minv) / (maxv - minv + eps)
             slices = max_norm_val * x + min_norm_val * (1-x)
             return slices
-        
+
         if slice_axis in ['x','y','z']:
             if norm_level == 'slice':
                 slices = _norm_slices(slices, axis = (1,2))
@@ -433,13 +433,13 @@ class BaseMFractalMRI:
         '''
         TODO
         '''
-        
+
         if len(slices.shape) != 4:
             print(f'error: wrong slices dims = {slices.shape}')
 
         slices = vectorize(padding)(slices)
         return vectorize(hilbert3d_sfc)(slices)
-    
+
     @staticmethod
     def _slices_to_sfc_ddsfc2d(slices : np.ndarray,
                                **kwargs) -> np.ndarray:
@@ -597,7 +597,7 @@ class BaseMFractalMRI:
 
         dfa = dfa.astype('float')
         scales = scales.astype('int')
-        
+
         return dfa, scales
 
     @staticmethod
@@ -672,7 +672,7 @@ class BaseMFractalMRI:
 
         else:
             print(f'error: wrong len(sfcs.shape) = {len(sfcs.shape)}')
-    
+
         return fqs, scaless
 
     @staticmethod
