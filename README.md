@@ -2,12 +2,16 @@
 
 
 Fractal Space-Curve Analysis is a method designed for the analysis of multidimensional data. FSCA combines the [Space-Filling Curve](https://en.wikipedia.org/wiki/Space-filling_curve) mapping for dimensionality reduction with the [Detrended Fluctuation Analysis](https://www.sciencedirect.com/science/article/pii/S0378437102013833) fractal analysis for interpretable results.
+<p align="center">
+  <img alt="FSCA flowchart" src="imgs/flowchart.png" width="40%" >
+</p>
 
-![FSCA flowchart](imgs/flowchart.png)
+<!-- ![FSCA flowchart]( | width=100) -->
 
 Method is suitable for diverse data formats with special submodule for neuroimaging data. An example of FSCA application to identification of Alzheimer's Disease:
-
-![Example: Alzheimers' disease](https://github.com/grelade/fractal-alzheimer/blob/master/dataplot.png)
+<p align="center">
+  <img src="https://github.com/grelade/fractal-alzheimer/blob/master/dataplot.png" alt="Example: Alzheimers' disease" width="70%" >
+</p>
 
 ----
 
