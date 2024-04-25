@@ -122,6 +122,70 @@ class base_pipeline:
         return vectorize(calc)(data)
 
     @staticmethod
+    def _norm_single_slice(slice : np.ndarray,
+                            min_norm_val : float = 0.0,
+                            max_norm_val : float = 255.0,
+                            quantize_val : bool = False,
+                            eps : float = 1e-20,
+                            **kwargs) -> np.ndarray:
+
+        f'''
+        Slice the given 3D MRI scan along the specified axis.
+        If slice_axis is 'none', a 3D hyper-slice will be created instead.
+        Normalization of slices is conducted a) separately in each slice,
+        or b) globally for the whole scan.
+        If `quantize_val` = True, round the normalized values to the nearest integer.
+
+        Parameters:
+        ----------
+        slice : np.ndarray
+            The 2D/3D slice to be sliced.
+        min_norm_val : float, optional (default = 0.0)
+            The minimum value to which the slices are normalized.
+        max_norm_val : float, optional (default = 255.0)
+            The maximum value to which the slices are normalized.
+        quantize_val : bool, optional (default = False)
+            Whether to round the normalized values to the nearest integer.
+        eps : float, optional (default = 1e-20)
+            A small positive constant to avoid division by zero.
+
+        Returns:
+        -------
+        np.ndarray
+            The normalized slice as a numpy array.
+        '''
+
+        minv = slice.min(keepdims=True)
+        maxv = slice.max(keepdims=True)
+        x = (slice - minv) / (maxv - minv + eps)
+        slice = max_norm_val * x + min_norm_val * (1-x)
+
+        if quantize_val:
+            slice = np.round(slice).astype(int)
+
+        if (slice < 0).any():
+            print('warning: negative values in slices')
+
+        return slice
+
+    @staticmethod
+    def _norm_batch_slices(slices : np.ndarray,
+                            min_norm_val : float = 0.0,
+                            max_norm_val : float = 255.0,
+                            quantize_val : bool = False,
+                            eps : float = 1e-20,
+                            **kwargs) -> np.ndarray:
+
+        def calc(slice):
+            return base_pipeline._norm_single_slice(slice = slice,
+                                                    min_norm_val = min_norm_val,
+                                                    max_norm_val = max_norm_val,
+                                                    quantize_val = quantize_val,
+                                                    eps = eps)
+
+        return vectorize(calc)(slices)
+
+    @staticmethod
     def _map_data_to_sfc_hilbert2d(data : np.ndarray) -> np.ndarray:
         '''
         Convert the given 2D data to a 1D signal by using the 2D Hilbert space-filling curve.
@@ -814,6 +878,30 @@ class pipeline_3d(base_pipeline):
         self.slice_axis = slice_axis
         self.sfc_dim = {'x':2,'y':2,'z':2,None:3,'none':3,'None':3}[slice_axis]
 
+    def norm_slices(self, **kwargs):
+
+        if self._proc_mode == 'single' and self.sfc_dim == 2:
+            slices = self.slices
+        elif self._proc_mode == 'batch' and self.sfc_dim == 2:
+            slices, slices_shape = super().pack_array(self.slices,final_dims=2)
+        elif self._proc_mode == 'single' and self.sfc_dim == 3:
+            slices = np.expand_dims(self.slices,0)
+        elif self._proc_mode == 'batch' and self.sfc_dim == 3:
+            slices = self.slices
+
+        slices = super()._norm_batch_slices(slices,**kwargs)
+
+        if self._proc_mode == 'single' and self.sfc_dim == 2:
+            pass
+        elif self._proc_mode == 'batch' and self.sfc_dim == 2:
+            slices = slices.reshape(slices_shape[:2]+slices.shape[-2:])
+        elif self._proc_mode == 'single' and self.sfc_dim == 3:
+            slices = slices.squeeze()
+        elif self._proc_mode == 'batch' and self.sfc_dim == 3:
+            pass
+
+        self.slices = slices
+
     def map_data_to_sfc(self,
                         sfc_type : str = DEFAULT_SFC_TYPE,
                         **kwargs) -> None:
@@ -914,8 +1002,7 @@ class pipeline_3d(base_pipeline):
         fqs, scales = super()._calc_batch_mfdfa(sfcs = sfcs,
                                               scales = scales,
                                               qorders = qorders,
-                                              mfdfa_lib = mfdfa_lib,
-                                              **kwargs)
+                                              mfdfa_lib = mfdfa_lib)
 
         if self.sfc_dim == 2:
 
@@ -1032,6 +1119,7 @@ class pipeline_3d(base_pipeline):
         self.load_data(data,**kwargs)
         self.set_proc_mode(**kwargs) # set processing mode (single or batch)
         self.slice_data(**kwargs) # output -> self.slices
+        self.norm_slices(**kwargs) # output -> normalized self.slices
         self.map_data_to_sfc(**kwargs) # output -> self.sfcs
         self.calc_mfdfa(**kwargs) # output -> self.fqs, self.scales, self.qorders
         self.calc_ghurst(**kwargs) # output -> self.ghs, self.ghs_res
@@ -1061,6 +1149,31 @@ class pipeline_3x1d(pipeline_3d):
         self.slices = slices
         self.slice_axis = slice_axis
         self.sfc_dim = {'x':2,'y':2,'z':2,None:3,'none':3,'None':3}[slice_axis]
+
+    def norm_slices(self, **kwargs):
+
+        if self._proc_mode == 'single' and self.sfc_dim == 2:
+            slices, slices_shape = super().pack_array(self.slices,final_dims=2)
+        elif self._proc_mode == 'batch' and self.sfc_dim == 2:
+            slices, slices_shape = super().pack_array(self.slices,final_dims=2)
+        elif self._proc_mode == 'single' and self.sfc_dim == 3:
+            slices = self.slices
+        elif self._proc_mode == 'batch' and self.sfc_dim == 3:
+            slices, slices_shape = super().pack_array(self.slices,final_dims=3)
+
+        slices = super()._norm_batch_slices(slices,**kwargs)
+
+        if self._proc_mode == 'single' and self.sfc_dim == 2:
+            slices = slices.reshape(slices_shape[:2]+slices.shape[-2:])
+        elif self._proc_mode == 'batch' and self.sfc_dim == 2:
+            slices = slices.reshape(slices_shape[:3]+slices.shape[-2:])
+        elif self._proc_mode == 'single' and self.sfc_dim == 3:
+            pass
+        elif self._proc_mode == 'batch' and self.sfc_dim == 3:
+            slices = slices.reshape(slices_shape[:2]+slices.shape[-3:])
+
+
+        self.slices = slices
 
     def map_data_to_sfc(self,
                         sfc_type : str = DEFAULT_SFC_TYPE,
