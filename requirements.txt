@@ -1,0 +1,4 @@
+MFDFA==0.4.3
+nibabel==5.2.1
+numpy==1.26.4
+packaging==24.0

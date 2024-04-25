@@ -2,6 +2,7 @@ from typing import List,Union,Tuple
 from pathlib import Path
 import numpy as np
 
+from fsca.const import *
 from fsca.neuro.preprocessing import Preprocessing
 from fsca.neuro.pipeline import pipeline_mri
 
