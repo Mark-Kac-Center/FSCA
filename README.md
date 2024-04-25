@@ -55,7 +55,12 @@ hurst_profile = pipe.get_result()
 
 ## Requirements
 
-* [MFDFA](https://github.com/mlaib/MFDFA)
-* [nibabel](https://github.com/nipy/nibabel)
-* [antspyx](https://github.com/ANTsX/ANTsPy) [not required, used by MRI preprocessing module]
-* [antspynet](https://github.com/ANTsX/ANTsPyNet) [not required, used by MRI preprocessing module]
+TO use the FSCA method: 
+```
+pip install -r requirements.txt
+```
+
+To use the additional MRI preprocessing module:
+```
+pip install -r requirements_ext.txt
+```
