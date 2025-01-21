@@ -13,6 +13,23 @@ Method is suitable for diverse data formats with special submodule for neuroimag
   <img src="https://github.com/grelade/fractal-alzheimer/blob/master/dataplot.png" alt="Example: Alzheimers' disease" width="70%" >
 </p>
 
+## Citation
+The method's description and testing is fully described in
+
+Grela, J., Drogosz, Z., Janarek, J., Ochab, J.K., Cifre, I., Gudowska-Nowak, E., Nowak, M.A., Oswiecimka, P., Chialvo, D., 2025. Using space-filling curves and fractals to reveal spatial and temporal patterns in neuroimaging data. J. Neural Eng. [https://doi.org/10.1088/1741-2552/ada705](https://doi.org/10.1088/1741-2552/ada705)
+
+Please cite as:
+
+``` bibtex
+@article{grela2025fsca,
+	author={Grela, Jacek and Drogosz, Zbigniew and Janarek, Jakub and Ochab, Jeremi K and Cifre, Ignacio and Gudowska-Nowak, Ewa and Nowak, Maciej A and Oswiecimka, Pawel and Chialvo, Dante},
+	title={Using space-filling curves and fractals to reveal spatial and temporal patterns in neuroimaging data},
+	journal={Journal of Neural Engineering},
+	url={http://iopscience.iop.org/article/10.1088/1741-2552/ada705},
+	year={2025}
+}
+```
+
 ----
 
 ## Usage
