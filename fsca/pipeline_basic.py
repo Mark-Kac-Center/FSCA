@@ -5,6 +5,7 @@ from fsca.const import *
 from fsca.sfc import padding, hilbert2d_sfc,hilbert3d_sfc, ddsfc2d
 from fsca.mfdfa import mfdfa_py, mfdfa_matlab, ghurst
 from fsca.mfdfa import aut_artefact8
+from fsca.mfdfa import spectrum, spectrum_params
 from fsca.tools import vectorize,mvectorize,mvectorize2
 
 class base_pipeline:
@@ -21,7 +22,12 @@ class base_pipeline:
         self.qorders = None
         self.ghs = None
         self.ghs_res = None
-
+        
+        self.alphas = None
+        self.fs = None
+        self.Ds = None
+        self.As = None
+        
         self._proc_mode = None
 
         self.output = output
@@ -483,6 +489,57 @@ class base_pipeline:
 
         return ghs, ghs_res
 
+    @staticmethod
+    def _calc_single_spectrum(qorders: np.ndarray, 
+                              gh: np.ndarray):
+        '''
+        
+        '''
+        alpha, f = spectrum(qorders,gh)
+        return alpha, f     
+
+    @staticmethod
+    def _calc_batch_spectrum(qorders: np.ndarray, ghs: np.ndarray):
+        '''
+        '''
+        if len(qorders.shape) == 1:
+            qorders = np.stack([qorders for _ in range(ghs.shape[0])])
+            
+        alphas, fs = mvectorize2(spectrum)(qorders,ghs)
+        return alphas, fs
+
+    @staticmethod
+    def _calc_single_spectrum_params(alpha: np.ndarray, 
+                                     f: np.ndarray):
+        '''
+        
+        '''
+        D,A = spectrum_params(alpha, f)
+        return alpha, f     
+
+    @staticmethod
+    def _calc_batch_spectrum_params(alphas: np.ndarray, 
+                                    fs: np.ndarray):
+        '''
+        
+        '''
+        Ds, As = mvectorize2(spectrum_params)(alphas,fs)
+        return Ds, As
+
+    def calc_mfdfa(self):
+        pass
+
+    def calc_ghurst(self):
+        pass
+        
+    def calc_falpha(self, **kwargs) -> None:
+        print('warning: calc_falpha implementation is in an alpha stage')
+        self.alphas, self.fs = self._calc_batch_spectrum(qorders = self.qorders, ghs = self.ghs)
+        self.Ds, self.As = self._calc_batch_spectrum_params(alphas = self.alphas, fs = self.fs)
+        
+    def run(self):
+        pass
+        
 class pipeline_2d(base_pipeline):
     '''
     2d process pipeline
@@ -656,7 +713,7 @@ class pipeline_2d(base_pipeline):
             ghs_res = ghs_res.squeeze()
 
         self.ghs, self.ghs_res = ghs, ghs_res
-
+        
     def run(self, data: np.ndarray, **kwargs) -> None:
         self.load_data(data, **kwargs)
         self.set_proc_mode(**kwargs) # set processing mode (single or batch)
@@ -1123,7 +1180,8 @@ class pipeline_3d(base_pipeline):
         self.map_data_to_sfc(**kwargs) # output -> self.sfcs
         self.calc_mfdfa(**kwargs) # output -> self.fqs, self.scales, self.qorders
         self.calc_ghurst(**kwargs) # output -> self.ghs, self.ghs_res
-
+        # self.calc_falpha(**kwargs) # output -> self.alphas, self.fs, self.Ds, self.As
+        
 class pipeline_3x1d(pipeline_3d):
 
     def __init__(self,*args,**kwargs) -> None:

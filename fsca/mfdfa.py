@@ -145,9 +145,13 @@ def ghurst(Fq : np.ndarray,
 
 
 def spectrum(qs: np.array, 
-             ghursts: np.array) -> Tuple[np.array,np.array]:
-
-    T = qs*ghursts - 1
+             ghurst: np.array) -> Tuple[np.array,np.array]:
+    '''
+    calc the spectrum f(alpha) from generalised Hurst exponents.
+    qs = list of ghurst orders
+    ghurst = list of exponents
+    '''
+    T = qs*ghurst - 1
     dT = np.diff(T)
     dqs = np.diff(qs)
     alpha = dT/dqs
@@ -157,6 +161,9 @@ def spectrum(qs: np.array,
 
 def spectrum_params(alpha: np.ndarray, 
                     f: np.ndarray) -> Tuple[float,float]:
+    '''
+    calculate summary statistics (width D and asymmetry A) for f(alpha) spectrum
+    '''
     
     alpha_max = max(alpha)
     alpha_min = min(alpha)
