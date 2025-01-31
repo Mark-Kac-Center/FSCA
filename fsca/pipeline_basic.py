@@ -1,5 +1,7 @@
 from typing import Union, List, Tuple
 import numpy as np
+from pathlib import Path
+from collections.abc import Iterable
 
 from fsca.const import *
 from fsca.sfc import padding, hilbert2d_sfc,hilbert3d_sfc, ddsfc2d
@@ -32,10 +34,7 @@ class base_pipeline:
 
         self.output = output
         self.verbose = verbose
-
-    def run(self, data : np.ndarray) -> None:
-        pass
-
+    
     def get_result(self):
         h_ix = np.argwhere(self.qorders == 2)
         if len(h_ix) > 0:
@@ -68,6 +67,26 @@ class base_pipeline:
         else:
             raise ValueError(f'cannot set _proc_mode; wrong data.shape = {self.data.shape}')
 
+    def calc_mfdfa(self):
+        pass
+
+    def calc_ghurst(self):
+        pass
+        
+    def calc_falpha(self, **kwargs) -> None:
+        print('warning: calc_falpha implementation is in an alpha stage')
+        self.alphas, self.fs = self._calc_batch_spectrum(qorders = self.qorders, ghs = self.ghs)
+        self.Ds, self.As = self._calc_batch_spectrum_params(alphas = self.alphas, fs = self.fs) 
+
+    def run(self, data : np.ndarray) -> None:
+        pass
+
+    def save_state(self):
+        pass
+
+    def load_state(self):
+        pass
+    
     @staticmethod
     def pack_array(array: np.ndarray,
                    final_dims: int = 2) -> Tuple[tuple,np.ndarray]:
@@ -79,6 +98,26 @@ class base_pipeline:
     def unpack_array(array: np.ndarray, array_shape: tuple) -> np.ndarray:
         return array.reshape(*array_shape)
 
+    def _form_state_dict(self):
+        state_dict = {}
+        state_dict['data'] = self.data
+        state_dict['data_dim'] = self.data_dim
+        state_dict['sfcs'] = self.sfcs
+        state_dict['fqs'] = self.fqs
+        state_dict['scales'] = self.scales
+        state_dict['qorders'] = self.qorders
+        state_dict['ghs'] = self.ghs
+        state_dict['ghs_res'] = self.ghs_res
+        state_dict['alphas'] = self.alphas
+        state_dict['fs'] = self.fs
+        state_dict['Ds'] = self.Ds
+        state_dict['As'] = self.As
+        state_dict['_proc_mode'] = self._proc_mode
+        state_dict['output'] = self.output
+        state_dict['verbose'] = self.verbose
+
+        return state_dict
+        
     @staticmethod
     def _slice_single_data(data : np.ndarray,
                            slice_axis : str = DEFAULT_SLICE_AXIS, **kwargs) -> np.ndarray:
@@ -526,20 +565,6 @@ class base_pipeline:
         Ds, As = mvectorize2(spectrum_params)(alphas,fs)
         return Ds, As
 
-    def calc_mfdfa(self):
-        pass
-
-    def calc_ghurst(self):
-        pass
-        
-    def calc_falpha(self, **kwargs) -> None:
-        print('warning: calc_falpha implementation is in an alpha stage')
-        self.alphas, self.fs = self._calc_batch_spectrum(qorders = self.qorders, ghs = self.ghs)
-        self.Ds, self.As = self._calc_batch_spectrum_params(alphas = self.alphas, fs = self.fs)
-        
-    def run(self):
-        pass
-        
 class pipeline_2d(base_pipeline):
     '''
     2d process pipeline
@@ -914,6 +939,78 @@ class pipeline_3d(base_pipeline):
         self.slices = None
         self.slice_axis = ''
         self.sfc_dim = None
+
+    def _form_state_dict(self):
+        state_dict = super()._form_state_dict()
+
+        state_dict['slices'] = self.slices
+        state_dict['slice_axis'] = self.slice_axis
+        state_dict['sfc_dim'] = self.sfc_dim
+
+        return state_dict
+    
+    def save_state(self, file: Union[str,Path], state_type: str = 'full') -> None:
+
+        state_dict = self._form_state_dict()
+        if state_type == 'no_scan':
+            del state_dict['data']
+            del state_dict['slices']
+        elif state_type == 'only_outputs':
+            del state_dict['data']
+            del state_dict['slices']
+            del state_dict['sfcs']
+            
+        np.savez_compressed(file, **state_dict, allow_pickle = True)
+
+    def load_state(self, file: Union[str,Path]) -> None:
+        
+        def parse_param(p):
+            if not isinstance(p, Iterable):
+                return p
+            else:
+                return p.item() if len(p.shape) == 0 else p
+        
+        state_dict = np.load(file, allow_pickle=True)
+
+        for param_name in state_dict.files:
+            p = parse_param(state_dict[param_name])
+            if param_name == 'data':
+                self.data = p
+            elif param_name == 'data_dim':
+                self.data_dim = p
+            elif param_name == 'sfcs':
+                self.sfcs = p
+            elif param_name == 'fqs':
+                self.fqs = p
+            elif param_name == 'scales':
+                self.scales = p
+            elif param_name == 'qorders':
+                self.qorders = p
+            elif param_name == 'ghs':
+                self.ghs = p
+            elif param_name == 'ghs_res':
+                self.ghs_res = p
+            elif param_name == 'alphas':
+                self.alphas = p
+            elif param_name == 'fs':
+                self.fs = p
+            elif param_name == 'Ds':
+                self.Ds = p
+            elif param_name == 'As':
+                self.As = p
+            elif param_name == '_proc_mode':
+                self._proc_mode = p
+            elif param_name == 'output':
+                self.output = p
+            elif param_name == 'verbose':
+                self.verbose = p
+                
+            elif param_name == 'slices':
+                self.slices = p
+            elif param_name == 'slice_axis':
+                self.slice_axis = p
+            elif param_name == 'sfc_dim':
+                self.sfc_dim = p
 
     def slice_data(self,
                    slice_axis : str = DEFAULT_SLICE_AXIS, **kwargs) -> None:
