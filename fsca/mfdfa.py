@@ -1,3 +1,5 @@
+from typing import Tuple
+
 import numpy as np
 from MFDFA import MFDFA
 
@@ -139,3 +141,38 @@ def ghurst(Fq : np.ndarray,
     params[0,params[0]>exponent_cutoff] = np.nan
 
     return params[0],res
+
+
+
+def spectrum(qs: np.array, 
+             ghurst: np.array) -> Tuple[np.array,np.array]:
+    '''
+    calc the spectrum f(alpha) from generalised Hurst exponents.
+    qs = list of ghurst orders
+    ghurst = list of exponents
+    '''
+    T = qs*ghurst - 1
+    dT = np.diff(T)
+    dqs = np.diff(qs)
+    alpha = dT/dqs
+    f = qs[:-1]*alpha - T[:-1]
+    
+    return alpha, f
+
+def spectrum_params(alpha: np.ndarray, 
+                    f: np.ndarray) -> Tuple[float,float]:
+    '''
+    calculate summary statistics (width D and asymmetry A) for f(alpha) spectrum
+    '''
+    
+    alpha_max = max(alpha)
+    alpha_min = min(alpha)
+    alpha_0 = alpha[np.argmax(f)]
+    
+    D = max(alpha) - min(alpha)
+    
+    Dalpha_L = alpha_0 - alpha_min
+    Dalpha_R = alpha_max - alpha_0
+    A = (Dalpha_L - Dalpha_R)/(Dalpha_L + Dalpha_R)
+
+    return D, A
